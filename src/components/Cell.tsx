@@ -1,5 +1,6 @@
-import React, { memo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { memo, useEffect, useRef } from 'react';
+import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FoxFace } from './FoxFace';
 import { CellState, FOX, MARK } from '../logic/puzzle';
 import { colors } from '../theme';
 
@@ -24,17 +25,35 @@ const THIN = StyleSheet.hairlineWidth * 2;
 function CellImpl(props: CellProps) {
   const { row, col, size, color, state, conflict, hinted, solved, edges, onPress, onLongPress } =
     props;
-  const emoji = size * 0.62;
+  const pop = useRef(new Animated.Value(state === FOX ? 1 : 0)).current;
+  const press = useRef(new Animated.Value(1)).current;
+
+  // Fox pops in with a little overshoot; marks fade in.
+  useEffect(() => {
+    if (state === FOX) {
+      pop.setValue(0.4);
+      Animated.spring(pop, { toValue: 1, useNativeDriver: true, speed: 30, bounciness: 14 }).start();
+    } else {
+      pop.setValue(0);
+    }
+  }, [state, pop]);
+
   return (
     <Pressable
       onPress={() => onPress(row, col)}
       onLongPress={() => onLongPress(row, col)}
+      onPressIn={() =>
+        Animated.timing(press, { toValue: 0.9, duration: 60, useNativeDriver: true }).start()
+      }
+      onPressOut={() =>
+        Animated.spring(press, { toValue: 1, useNativeDriver: true, speed: 40, bounciness: 8 }).start()
+      }
       delayLongPress={250}
       accessibilityRole="button"
       accessibilityLabel={`Row ${row + 1} column ${col + 1}, ${
         state === FOX ? 'fox' : state === MARK ? 'marked' : 'empty'
       }`}
-      style={({ pressed }) => [
+      style={[
         styles.cell,
         {
           width: size,
@@ -44,20 +63,21 @@ function CellImpl(props: CellProps) {
           borderLeftWidth: edges.left ? THICK : THIN,
           borderRightWidth: edges.right ? THICK : 0,
           borderBottomWidth: edges.bottom ? THICK : 0,
-          opacity: pressed ? 0.75 : 1,
         },
       ]}
     >
-      {state === MARK && (
-        <Text style={[styles.mark, { fontSize: size * 0.5 }]} selectable={false}>
-          ✕
-        </Text>
-      )}
-      {state === FOX && (
-        <Text style={[styles.fox, { fontSize: emoji }]} selectable={false}>
-          🦊
-        </Text>
-      )}
+      <Animated.View style={[styles.content, { transform: [{ scale: press }] }]}>
+        {state === MARK && (
+          <Text style={[styles.mark, { fontSize: size * 0.5 }]} selectable={false}>
+            ✕
+          </Text>
+        )}
+        {state === FOX && (
+          <Animated.View style={{ transform: [{ scale: pop }] }}>
+            <FoxFace size={size * 0.78} />
+          </Animated.View>
+        )}
+      </Animated.View>
       {conflict && <View pointerEvents="none" style={[styles.conflict, { borderRadius: size * 0.18 }]} />}
       {hinted && <View pointerEvents="none" style={[styles.hint, { borderRadius: size * 0.18 }]} />}
       {solved && state === FOX && <View pointerEvents="none" style={styles.glow} />}
@@ -73,14 +93,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderColor: colors.gridLine,
   },
+  content: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   mark: {
     color: 'rgba(255,255,255,0.95)',
     fontWeight: '800',
     textShadowColor: 'rgba(0,0,0,0.15)',
     textShadowRadius: 2,
-  },
-  fox: {
-    textAlign: 'center',
   },
   conflict: {
     ...StyleSheet.absoluteFill,

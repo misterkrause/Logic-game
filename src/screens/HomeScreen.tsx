@@ -1,5 +1,8 @@
 import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { FoxFace } from '../components/FoxFace';
+import { LockIcon } from '../components/Icons';
+import { PressableScale } from '../components/PressableScale';
 import { Button } from '../components/ui';
 import { formatTime } from '../format';
 import { levelSpec } from '../logic/levels';
@@ -19,7 +22,9 @@ export function HomeScreen({ progress, onPlay, onOpenSettings }: Props) {
   return (
     <View style={styles.container}>
       <View style={styles.hero}>
-        <Text style={styles.mascot}>🦊</Text>
+        <View style={styles.mascot}>
+          <FoxFace size={96} />
+        </View>
         <Text style={styles.title}>Fox Fields</Text>
         <Text style={styles.subtitle}>Tuck one fox into every field. No ads, no lives, no timers you can't ignore.</Text>
       </View>
@@ -28,34 +33,38 @@ export function HomeScreen({ progress, onPlay, onOpenSettings }: Props) {
 
       <View style={styles.levelsHeader}>
         <Text style={styles.sectionTitle}>Levels</Text>
-        <Pressable onPress={onOpenSettings} accessibilityRole="button" accessibilityLabel="Settings">
+        <PressableScale onPress={onOpenSettings} accessibilityRole="button" accessibilityLabel="Settings" hitSlop={10}>
           <Text style={styles.link}>Settings</Text>
-        </Pressable>
+        </PressableScale>
       </View>
       <ScrollView contentContainerStyle={styles.levelGrid} showsVerticalScrollIndicator={false}>
         {levels.map((lvl) => {
           const unlocked = lvl <= next;
           const best = progress.best[lvl];
           return (
-            <Pressable
+            <PressableScale
               key={lvl}
               disabled={!unlocked}
               onPress={() => onPlay(lvl)}
               accessibilityRole="button"
               accessibilityLabel={`Level ${lvl}${unlocked ? '' : ', locked'}`}
-              style={({ pressed }) => [
+              pressedScale={0.92}
+              style={[
                 styles.levelTile,
                 !unlocked && styles.levelLocked,
                 best !== undefined && styles.levelDone,
-                pressed && unlocked && styles.pressed,
               ]}
             >
               <Text style={[styles.levelNumber, !unlocked && styles.levelNumberLocked]}>{lvl}</Text>
-              <Text style={styles.levelMeta}>
-                {unlocked ? `${levelSpec(lvl).size}×${levelSpec(lvl).size}` : '🔒'}
-              </Text>
+              {unlocked ? (
+                <Text style={styles.levelMeta}>
+                  {levelSpec(lvl).size}×{levelSpec(lvl).size}
+                </Text>
+              ) : (
+                <LockIcon />
+              )}
               {best !== undefined && <Text style={styles.levelBest}>{formatTime(best)}</Text>}
-            </Pressable>
+            </PressableScale>
           );
         })}
       </ScrollView>
@@ -74,8 +83,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   mascot: {
-    fontSize: 64,
-    marginBottom: 4,
+    marginBottom: 8,
   },
   title: {
     fontSize: font.title,
@@ -132,9 +140,6 @@ const styles = StyleSheet.create({
   },
   levelDone: {
     borderColor: colors.success,
-  },
-  pressed: {
-    opacity: 0.7,
   },
   levelNumber: {
     fontSize: 20,

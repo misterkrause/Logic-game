@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { SafeAreaView, StatusBar as RNStatusBar, StyleSheet, Platform } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as haptics from './src/haptics';
 import { GameScreen } from './src/screens/GameScreen';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { SettingsModal } from './src/screens/SettingsModal';
@@ -19,6 +21,15 @@ import { colors } from './src/theme';
 type Screen = { name: 'home' } | { name: 'game'; level: number };
 
 export default function App() {
+  return (
+    <SafeAreaProvider>
+      <Root />
+    </SafeAreaProvider>
+  );
+}
+
+function Root() {
+  const insets = useSafeAreaInsets();
   const [screen, setScreen] = useState<Screen>({ name: 'home' });
   const [progress, setProgress] = useState<Progress>(defaultProgress);
   const [settings, setSettings] = useState<Settings>(defaultSettings);
@@ -26,11 +37,15 @@ export default function App() {
 
   useEffect(() => {
     loadProgress().then(setProgress);
-    loadSettings().then(setSettings);
+    loadSettings().then((s) => {
+      setSettings(s);
+      haptics.setEnabled(s.haptics);
+    });
   }, []);
 
   const updateSettings = (s: Settings) => {
     setSettings(s);
+    haptics.setEnabled(s.haptics);
     saveSettings(s);
   };
 
@@ -47,7 +62,17 @@ export default function App() {
   }, []);
 
   return (
-    <SafeAreaView style={styles.root}>
+    <View
+      style={[
+        styles.root,
+        {
+          paddingTop: insets.top,
+          paddingBottom: insets.bottom,
+          paddingLeft: insets.left,
+          paddingRight: insets.right,
+        },
+      ]}
+    >
       <StatusBar style="dark" />
       {screen.name === 'home' ? (
         <HomeScreen
@@ -57,6 +82,7 @@ export default function App() {
         />
       ) : (
         <GameScreen
+          key={screen.level}
           level={screen.level}
           settings={settings}
           onBack={() => setScreen({ name: 'home' })}
@@ -71,7 +97,7 @@ export default function App() {
         onChange={updateSettings}
         onClose={() => setSettingsOpen(false)}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -79,6 +105,5 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: colors.bg,
-    paddingTop: Platform.OS === 'android' ? RNStatusBar.currentHeight ?? 0 : 0,
   },
 });

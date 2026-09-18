@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Modal, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Board } from '../components/Board';
+import { FoxFace } from '../components/FoxFace';
+import { BackIcon, ClockIcon, GearIcon } from '../components/Icons';
 import { Button, Chip, Pill, RoundButton } from '../components/ui';
 import { difficultyLabel, formatTime } from '../format';
 import * as haptics from '../haptics';
@@ -37,7 +39,11 @@ export function GameScreen({ level, settings, onBack, onOpenSettings, onComplete
   const [seconds, setSeconds] = useState(0);
   const [hint, setHint] = useState<{ row: number; col: number } | null>(null);
   const [showWin, setShowWin] = useState(false);
-  const reportedRef = useRef(false);
+  // The elapsed time is mirrored in a ref so the win effect can read it
+  // without depending on it. Depending on `seconds` let a timer tick that
+  // landed right after the solving tap cancel the pending win sheet.
+  const secondsRef = useRef(0);
+  secondsRef.current = seconds;
 
   const { width, height } = useWindowDimensions();
   const boardSize = Math.min(width - 40, height * 0.52, 520);
@@ -47,16 +53,6 @@ export function GameScreen({ level, settings, onBack, onOpenSettings, onComplete
     const t = setTimeout(() => puzzleForLevel(level + 1), 1500);
     return () => clearTimeout(t);
   }, [level]);
-
-  // Reset when the level changes.
-  useEffect(() => {
-    setGrid(emptyGrid(puzzle.size));
-    setHistory([]);
-    setSeconds(0);
-    setHint(null);
-    setShowWin(false);
-    reportedRef.current = false;
-  }, [puzzle]);
 
   const solved = useMemo(() => isSolved(puzzle, grid), [puzzle, grid]);
   const conflicts = useMemo(
@@ -70,17 +66,20 @@ export function GameScreen({ level, settings, onBack, onOpenSettings, onComplete
     if (solved) return;
     const id = setInterval(() => setSeconds((s) => s + 1), 1000);
     return () => clearInterval(id);
-  }, [solved, puzzle]);
+  }, [solved]);
 
-  // Win handling.
+  // Win handling. Runs exactly once per solve; the screen is keyed by level
+  // so a new level always mounts fresh.
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
   useEffect(() => {
-    if (!solved || reportedRef.current) return;
-    reportedRef.current = true;
+    if (!solved) return;
     haptics.success(settings.haptics);
-    onComplete(level, seconds);
+    onCompleteRef.current(level, secondsRef.current);
     const t = setTimeout(() => setShowWin(true), 600);
     return () => clearTimeout(t);
-  }, [solved, level, seconds, onComplete, settings.haptics]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [solved]);
 
   const commit = useCallback(
     (next: Grid) => {
@@ -164,19 +163,23 @@ export function GameScreen({ level, settings, onBack, onOpenSettings, onComplete
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <RoundButton label="←" onPress={onBack} accessibilityLabel="Back to levels" />
+        <RoundButton onPress={onBack} accessibilityLabel="Back to levels">
+          <BackIcon />
+        </RoundButton>
         <View style={styles.headerCenter}>
           <Text style={styles.levelTitle}>Level {level}</Text>
           <Text style={styles.levelSub}>
             {puzzle.size}×{puzzle.size} · {difficultyLabel(puzzle.difficulty)}
           </Text>
         </View>
-        <RoundButton label="⚙" onPress={onOpenSettings} accessibilityLabel="Settings" />
+        <RoundButton onPress={onOpenSettings} accessibilityLabel="Settings">
+          <GearIcon />
+        </RoundButton>
       </View>
 
       <View style={styles.status}>
         <Pill>
-          <Text style={styles.pillEmoji}>🦊</Text>
+          <FoxFace size={22} />
           <Text style={styles.pillText}>
             <Text style={{ color: placed === puzzle.size ? colors.success : colors.accentDark }}>
               {placed}
@@ -185,7 +188,7 @@ export function GameScreen({ level, settings, onBack, onOpenSettings, onComplete
           </Text>
         </Pill>
         <Pill>
-          <Text style={styles.pillEmoji}>⏱</Text>
+          <ClockIcon size={20} />
           <Text style={styles.pillText}>{formatTime(seconds)}</Text>
         </Pill>
       </View>
@@ -218,7 +221,7 @@ export function GameScreen({ level, settings, onBack, onOpenSettings, onComplete
       <Modal visible={showWin} transparent animationType="fade" onRequestClose={() => setShowWin(false)}>
         <View style={styles.winBackdrop}>
           <View style={styles.winCard}>
-            <Text style={styles.winEmoji}>🦊🎉</Text>
+            <FoxFace size={72} />
             <Text style={styles.winTitle}>All foxes home!</Text>
             <Text style={styles.winBody}>
               Level {level} solved in {formatTime(seconds)}.
@@ -262,9 +265,6 @@ const styles = StyleSheet.create({
     gap: 12,
     marginBottom: 12,
   },
-  pillEmoji: {
-    fontSize: 18,
-  },
   pillText: {
     fontSize: 18,
     fontWeight: '800',
@@ -305,9 +305,6 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 360,
     gap: 8,
-  },
-  winEmoji: {
-    fontSize: 40,
   },
   winTitle: {
     fontSize: font.heading,

@@ -1,22 +1,25 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { PressableScale } from './PressableScale';
 import { colors, font, radius } from '../theme';
 
 export function RoundButton(props: {
-  label: string;
+  children: React.ReactNode;
   onPress: () => void;
-  accessibilityLabel?: string;
-  style?: ViewStyle;
+  accessibilityLabel: string;
+  style?: StyleProp<ViewStyle>;
 }) {
   return (
-    <Pressable
+    <PressableScale
       onPress={props.onPress}
       accessibilityRole="button"
-      accessibilityLabel={props.accessibilityLabel ?? props.label}
-      style={({ pressed }) => [styles.round, props.style, pressed && styles.pressed]}
+      accessibilityLabel={props.accessibilityLabel}
+      hitSlop={8}
+      pressedScale={0.9}
+      style={[styles.round, props.style]}
     >
-      <Text style={styles.roundLabel}>{props.label}</Text>
-    </Pressable>
+      {props.children}
+    </PressableScale>
   );
 }
 
@@ -37,21 +40,21 @@ export function Button(props: {
   onPress: () => void;
   variant?: 'primary' | 'secondary' | 'ghost';
   disabled?: boolean;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
 }) {
   const variant = props.variant ?? 'primary';
   return (
-    <Pressable
+    <PressableScale
       onPress={props.onPress}
       disabled={props.disabled}
       accessibilityRole="button"
-      style={({ pressed }) => [
+      accessibilityState={{ disabled: !!props.disabled }}
+      pressedScale={0.96}
+      style={[
         styles.button,
         variant === 'primary' && styles.buttonPrimary,
         variant === 'secondary' && styles.buttonSecondary,
         variant === 'ghost' && styles.buttonGhost,
-        props.disabled && styles.buttonDisabled,
-        pressed && styles.pressed,
         props.style,
       ]}
     >
@@ -63,7 +66,7 @@ export function Button(props: {
       >
         {props.label}
       </Text>
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -80,14 +83,6 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
     elevation: 2,
-  },
-  roundLabel: {
-    fontSize: 20,
-    color: colors.text,
-    fontWeight: '700',
-  },
-  pressed: {
-    opacity: 0.7,
   },
   chip: {
     flex: 1,
@@ -124,6 +119,7 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   button: {
+    minHeight: 50,
     paddingVertical: 14,
     paddingHorizontal: 22,
     borderRadius: radius.pill,
@@ -132,6 +128,11 @@ const styles = StyleSheet.create({
   },
   buttonPrimary: {
     backgroundColor: colors.accent,
+    shadowColor: colors.accentDark,
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
   },
   buttonSecondary: {
     backgroundColor: colors.card,
@@ -141,12 +142,10 @@ const styles = StyleSheet.create({
   buttonGhost: {
     backgroundColor: 'transparent',
   },
-  buttonDisabled: {
-    opacity: 0.45,
-  },
   buttonLabel: {
     fontSize: font.body,
     fontWeight: '700',
+    letterSpacing: 0.2,
   },
   buttonLabelPrimary: {
     color: '#FFFFFF',

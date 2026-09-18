@@ -30,6 +30,7 @@ src/components/         Board, Cell, small UI primitives
 src/screens/            Home, Game, Settings
 src/storage.ts          progress + settings persistence (AsyncStorage)
 src/theme.ts            colours and sizes
+art/fox.svg             mascot artwork; art/render-icons.js regenerates assets/
 ```
 
 ## Running it
