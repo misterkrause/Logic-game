@@ -49,6 +49,12 @@ npm test
 npm run typecheck
 ```
 
+## Web hosting on Netlify
+
+`netlify.toml` builds the web version (`npx expo export --platform web`) and
+publishes `dist/` with SPA redirects and long-lived caching for hashed bundles.
+Link the repository to the Netlify project and every push deploys.
+
 ## Building store binaries
 
 The app is Expo managed, so builds go through
