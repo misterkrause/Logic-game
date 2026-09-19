@@ -1,6 +1,6 @@
-import React, { memo, useEffect, useRef } from 'react';
-import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
-import { FoxFace } from './FoxFace';
+import React, { memo, useEffect, useRef, useState } from 'react';
+import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FoxFace, FoxMood } from './FoxFace';
 import { CellState, FOX, MARK } from '../logic/puzzle';
 import { colors } from '../theme';
 
@@ -26,17 +26,65 @@ function CellImpl(props: CellProps) {
   const { row, col, size, color, state, conflict, hinted, solved, edges, onPress, onLongPress } =
     props;
   const pop = useRef(new Animated.Value(state === FOX ? 1 : 0)).current;
+  const wiggle = useRef(new Animated.Value(0)).current; // -1..1 → rotation
+  const hop = useRef(new Animated.Value(0)).current; // 0..1 → lift
+  const shake = useRef(new Animated.Value(0)).current; // 0..1 → side-to-side
+  const sparkle = useRef(new Animated.Value(0)).current; // 0..1 → rise + fade
   const press = useRef(new Animated.Value(1)).current;
+  const [joy, setJoy] = useState(false);
+  const wasFox = useRef(state === FOX);
 
-  // Fox pops in with a little overshoot; marks fade in.
+  // Happy arrival: pop in, hop, wiggle, close eyes into a smile, sparkles.
   useEffect(() => {
-    if (state === FOX) {
-      pop.setValue(0.4);
-      Animated.spring(pop, { toValue: 1, useNativeDriver: true, speed: 30, bounciness: 14 }).start();
-    } else {
-      pop.setValue(0);
+    const arrived = state === FOX && !wasFox.current;
+    wasFox.current = state === FOX;
+    if (!arrived) {
+      if (state !== FOX) {
+        pop.setValue(0);
+        setJoy(false);
+      }
+      return;
     }
-  }, [state, pop]);
+    pop.setValue(0.3);
+    wiggle.setValue(0);
+    hop.setValue(0);
+    sparkle.setValue(0);
+    setJoy(true);
+    Animated.parallel([
+      Animated.spring(pop, { toValue: 1, useNativeDriver: true, speed: 26, bounciness: 16 }),
+      Animated.sequence([
+        Animated.timing(hop, { toValue: 1, duration: 140, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+        Animated.timing(hop, { toValue: 0, duration: 200, easing: Easing.bounce, useNativeDriver: true }),
+      ]),
+      Animated.sequence([
+        Animated.delay(80),
+        Animated.timing(wiggle, { toValue: 1, duration: 90, useNativeDriver: true }),
+        Animated.timing(wiggle, { toValue: -1, duration: 130, useNativeDriver: true }),
+        Animated.timing(wiggle, { toValue: 0.5, duration: 110, useNativeDriver: true }),
+        Animated.timing(wiggle, { toValue: 0, duration: 90, useNativeDriver: true }),
+      ]),
+      Animated.timing(sparkle, { toValue: 1, duration: 700, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+    ]).start();
+    const t = setTimeout(() => setJoy(false), 900);
+    return () => clearTimeout(t);
+  }, [state, pop, wiggle, hop, sparkle]);
+
+  // Unhappy: shake when this fox starts breaking a rule.
+  useEffect(() => {
+    if (!(conflict && state === FOX)) return;
+    shake.setValue(0);
+    Animated.timing(shake, { toValue: 1, duration: 380, easing: Easing.linear, useNativeDriver: true }).start();
+  }, [conflict, state, shake]);
+
+  const mood: FoxMood = conflict && state === FOX ? 'sad' : joy ? 'joy' : 'normal';
+  const rotate = wiggle.interpolate({ inputRange: [-1, 1], outputRange: ['-12deg', '12deg'] });
+  const translateY = hop.interpolate({ inputRange: [0, 1], outputRange: [0, -size * 0.14] });
+  const translateX = shake.interpolate({
+    inputRange: [0, 0.2, 0.4, 0.6, 0.8, 1],
+    outputRange: [0, -size * 0.09, size * 0.09, -size * 0.06, size * 0.04, 0],
+  });
+  const sparkleY = sparkle.interpolate({ inputRange: [0, 1], outputRange: [0, -size * 0.45] });
+  const sparkleOpacity = sparkle.interpolate({ inputRange: [0, 0.15, 0.7, 1], outputRange: [0, 1, 0.8, 0] });
 
   return (
     <Pressable
@@ -51,7 +99,7 @@ function CellImpl(props: CellProps) {
       delayLongPress={250}
       accessibilityRole="button"
       accessibilityLabel={`Row ${row + 1} column ${col + 1}, ${
-        state === FOX ? 'fox' : state === MARK ? 'marked' : 'empty'
+        state === FOX ? (conflict ? 'fox breaking a rule' : 'fox') : state === MARK ? 'marked' : 'empty'
       }`}
       style={[
         styles.cell,
@@ -73,11 +121,37 @@ function CellImpl(props: CellProps) {
           </Text>
         )}
         {state === FOX && (
-          <Animated.View style={{ transform: [{ scale: pop }] }}>
-            <FoxFace size={size * 0.78} />
+          <Animated.View
+            style={{ transform: [{ translateX }, { translateY }, { scale: pop }, { rotate }] }}
+          >
+            <FoxFace size={size * 0.78} mood={mood} />
           </Animated.View>
         )}
       </Animated.View>
+      {state === FOX && (
+        <>
+          <Animated.Text
+            pointerEvents="none"
+            style={[
+              styles.sparkle,
+              { left: size * 0.08, top: size * 0.18, fontSize: size * 0.22 },
+              { opacity: sparkleOpacity, transform: [{ translateY: sparkleY }] },
+            ]}
+          >
+            ✦
+          </Animated.Text>
+          <Animated.Text
+            pointerEvents="none"
+            style={[
+              styles.sparkle,
+              { right: size * 0.08, top: size * 0.1, fontSize: size * 0.18 },
+              { opacity: sparkleOpacity, transform: [{ translateY: sparkleY }] },
+            ]}
+          >
+            ✦
+          </Animated.Text>
+        </>
+      )}
       {conflict && <View pointerEvents="none" style={[styles.conflict, { borderRadius: size * 0.18 }]} />}
       {hinted && <View pointerEvents="none" style={[styles.hint, { borderRadius: size * 0.18 }]} />}
       {solved && state === FOX && <View pointerEvents="none" style={styles.glow} />}
@@ -92,6 +166,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderColor: colors.gridLine,
+    overflow: 'visible',
   },
   content: {
     alignItems: 'center',
@@ -100,6 +175,12 @@ const styles = StyleSheet.create({
   mark: {
     color: 'rgba(255,255,255,0.95)',
     fontWeight: '800',
+    textShadowColor: 'rgba(0,0,0,0.15)',
+    textShadowRadius: 2,
+  },
+  sparkle: {
+    position: 'absolute',
+    color: '#FFD84D',
     textShadowColor: 'rgba(0,0,0,0.15)',
     textShadowRadius: 2,
   },

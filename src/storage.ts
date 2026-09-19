@@ -5,6 +5,8 @@ export interface Progress {
   highestUnlocked: number;
   /** level → best time in seconds. */
   best: Record<number, number>;
+  /** level → best star count (1-3). */
+  stars: Record<number, number>;
 }
 
 export interface Settings {
@@ -15,7 +17,7 @@ export interface Settings {
 const PROGRESS_KEY = 'fox-fields/progress/v1';
 const SETTINGS_KEY = 'fox-fields/settings/v1';
 
-export const defaultProgress: Progress = { highestUnlocked: 1, best: {} };
+export const defaultProgress: Progress = { highestUnlocked: 1, best: {}, stars: {} };
 export const defaultSettings: Settings = { autoMark: false, haptics: true };
 
 async function readJson<T>(key: string, fallback: T): Promise<T> {

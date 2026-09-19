@@ -23,9 +23,16 @@ export function SettingsModal({ visible, settings, onChange, onClose }: Props) {
               touch each other, not even diagonally.
             </Text>
             <Text style={styles.body}>
-              Tap a cell to mark it with ✕, tap again for a fox, tap once more to clear it. Long
-              press a cell to place a fox straight away. Every level has exactly one answer, so no
-              guessing is ever required.
+              Pick a tool under the board, then tap cells: Mark puts a ✕ where a fox can't go, Fox
+              places a fox (tap it again to remove it), Erase clears a cell. Long press any cell to
+              drop a fox no matter which tool is selected. Every level has exactly one answer, so
+              no guessing is ever required.
+            </Text>
+            <Text style={styles.title}>Stars</Text>
+            <Text style={styles.body}>
+              ★ Solve the level.{'\n'}★★ Solve it with no hints and no mistakes. A mistake is placing
+              a fox that breaks a rule with the foxes already on the board.{'\n'}★★★ Also finish
+              under the par time shown in the header.
             </Text>
 
             <Text style={styles.title}>Settings</Text>

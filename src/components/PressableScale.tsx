@@ -1,9 +1,12 @@
 import React, { useRef } from 'react';
-import { Animated, Pressable, PressableProps, StyleProp, ViewStyle } from 'react-native';
+import { Animated, Pressable, PressableProps, StyleProp, StyleSheet, ViewStyle } from 'react-native';
 import * as haptics from '../haptics';
 
 interface Props extends Omit<PressableProps, 'style'> {
+  /** Visual style of the animated surface (background, padding, border). */
   style?: StyleProp<ViewStyle>;
+  /** Layout style of the outer pressable (flex, alignSelf, margins). */
+  containerStyle?: StyleProp<ViewStyle>;
   /** Scale while pressed. */
   pressedScale?: number;
   /** Selection haptic on press-in (respects the user's haptics setting). */
@@ -17,6 +20,7 @@ interface Props extends Omit<PressableProps, 'style'> {
  */
 export function PressableScale({
   style,
+  containerStyle,
   pressedScale = 0.95,
   haptic = true,
   onPressIn,
@@ -38,6 +42,7 @@ export function PressableScale({
   return (
     <Pressable
       disabled={disabled}
+      style={containerStyle}
       onPressIn={(e) => {
         if (haptic) haptics.select();
         animateTo(pressedScale, 0.85);
@@ -49,9 +54,18 @@ export function PressableScale({
       }}
       {...rest}
     >
-      <Animated.View style={[style, { transform: [{ scale }], opacity }, disabled && { opacity: 0.45 }]}>
+      <Animated.View
+        style={[styles.fill, style, { transform: [{ scale }], opacity }, disabled && { opacity: 0.45 }]}
+      >
         {children}
       </Animated.View>
     </Pressable>
   );
 }
+
+const styles = StyleSheet.create({
+  // Let the animated surface fill whatever size the outer pressable is given.
+  fill: {
+    flexGrow: 1,
+  },
+});

@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { FoxFace } from '../components/FoxFace';
 import { LockIcon } from '../components/Icons';
 import { PressableScale } from '../components/PressableScale';
+import { Stars } from '../components/Stars';
 import { Button } from '../components/ui';
 import { formatTime } from '../format';
 import { levelSpec } from '../logic/levels';
@@ -41,6 +42,7 @@ export function HomeScreen({ progress, onPlay, onOpenSettings }: Props) {
         {levels.map((lvl) => {
           const unlocked = lvl <= next;
           const best = progress.best[lvl];
+          const stars = progress.stars[lvl] ?? (best !== undefined ? 1 : 0);
           return (
             <PressableScale
               key={lvl}
@@ -56,14 +58,18 @@ export function HomeScreen({ progress, onPlay, onOpenSettings }: Props) {
               ]}
             >
               <Text style={[styles.levelNumber, !unlocked && styles.levelNumberLocked]}>{lvl}</Text>
-              {unlocked ? (
+              {!unlocked ? (
+                <LockIcon />
+              ) : best !== undefined ? (
+                <>
+                  <Stars lit={[stars >= 1, stars >= 2, stars >= 3]} size={12} gap={1} />
+                  <Text style={styles.levelBest}>{formatTime(best)}</Text>
+                </>
+              ) : (
                 <Text style={styles.levelMeta}>
                   {levelSpec(lvl).size}×{levelSpec(lvl).size}
                 </Text>
-              ) : (
-                <LockIcon />
               )}
-              {best !== undefined && <Text style={styles.levelBest}>{formatTime(best)}</Text>}
             </PressableScale>
           );
         })}
@@ -139,7 +145,7 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   levelDone: {
-    borderColor: colors.success,
+    borderColor: '#F5B63A',
   },
   levelNumber: {
     fontSize: 20,
@@ -155,7 +161,7 @@ const styles = StyleSheet.create({
   },
   levelBest: {
     fontSize: 10,
-    color: colors.success,
+    color: colors.textMuted,
     fontWeight: '700',
   },
 });

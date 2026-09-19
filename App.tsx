@@ -49,12 +49,13 @@ function Root() {
     saveSettings(s);
   };
 
-  const onComplete = useCallback((level: number, seconds: number) => {
+  const onComplete = useCallback((level: number, seconds: number, stars: number) => {
     setProgress((p) => {
       const best = p.best[level];
       const next: Progress = {
         highestUnlocked: Math.max(p.highestUnlocked, level + 1),
         best: { ...p.best, [level]: best === undefined ? seconds : Math.min(best, seconds) },
+        stars: { ...p.stars, [level]: Math.max(p.stars[level] ?? 0, stars) },
       };
       saveProgress(next);
       return next;

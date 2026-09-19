@@ -16,7 +16,8 @@ export function RoundButton(props: {
       accessibilityLabel={props.accessibilityLabel}
       hitSlop={8}
       pressedScale={0.9}
-      style={[styles.round, props.style]}
+      containerStyle={props.style}
+      style={styles.round}
     >
       {props.children}
     </PressableScale>
@@ -50,12 +51,12 @@ export function Button(props: {
       accessibilityRole="button"
       accessibilityState={{ disabled: !!props.disabled }}
       pressedScale={0.96}
+      containerStyle={props.style}
       style={[
         styles.button,
         variant === 'primary' && styles.buttonPrimary,
         variant === 'secondary' && styles.buttonSecondary,
         variant === 'ghost' && styles.buttonGhost,
-        props.style,
       ]}
     >
       <Text
